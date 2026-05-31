@@ -3,8 +3,13 @@ import requests
 import uuid
 import pandas as pd
 import os
+import threading
+import time
+import socket
 
-
+# ==========================================
+# ☁️ STREAMLIT CLOUD SECRETS INJECTION
+# ==========================================
 try:
     # 1. Map Streamlit Secrets to System Environment Variables
     for key, value in st.secrets.items():
@@ -23,6 +28,27 @@ except Exception as e:
     # If running locally without st.secrets, it safely ignores this block
     print(f"Skipping cloud secrets injection: {e}")
 
+# ==========================================
+# 🚀 FASTAPI BACKEND INJECTION
+# ==========================================
+def is_port_in_use(port):
+    """Checks if the backend is already running to prevent crashing on reload."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
+def start_backend():
+    """Boots the FastAPI engine silently in the background."""
+    import uvicorn
+    from backend_api import app as fastapi_app
+    uvicorn.run(fastapi_app, host="127.0.0.1", port=8000, log_level="warning")
+
+# Boot the backend immediately when the app loads (if not already running)
+if not is_port_in_use(8000):
+    backend_thread = threading.Thread(target=start_backend, daemon=True)
+    backend_thread.start()
+    # Give the backend a moment to fully initialize before the UI renders
+    time.sleep(3) 
+# ==========================================
 
 st.set_page_config(page_title="Agentic Talent Engine", layout="wide")
 
@@ -32,7 +58,7 @@ if "session_id" not in st.session_state:
 st.title("🤖 Autonomous Talent Acquisition Engine")
 st.markdown("Powered by Autogen, Llama-3, LangChain, and MCP Tools.")
 
-# --- NEW: We now have 4 tabs! ---
+# --- We now have 4 tabs! ---
 tab1, tab2, tab3, tab4 = st.tabs(["Agent Control Center", "ATS Database", "🗓️ Schedule Interviews", "⚖️ Interview Decisions"])
 
 with tab1:
@@ -52,7 +78,7 @@ with tab1:
                 else:
                     st.error(f"Backend Error: {response.text}")
             except requests.exceptions.ConnectionError:
-                st.error("Uvicorn backend is not running.")
+                st.error("Uvicorn backend is not running. Please refresh the page to restart the server.")
 
 with tab2:
     st.header("Candidate Pipeline")
@@ -72,7 +98,6 @@ with tab2:
         except:
             st.error("Could not connect to Database API.")
 
-# --- NEW: MANUAL SCHEDULING TAB ---
 with tab3:
     st.header("🗓️ Manual Calendar Scheduling")
     st.markdown("Select a candidate who has replied 'Yes' to the AI's email and pick a time slot.")
