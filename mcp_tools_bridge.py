@@ -17,27 +17,19 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from google.oauth2 import service_account
 
 from database import update_candidate_status
 from rag_pipeline import rag_pipeline
-
-from google.oauth2 import service_account
-    
-    # Path inside your cloud environment configured via app.py setup
-    sa_path = "credentials.json" 
-    
-    if os.path.exists(sa_path):
-        creds = service_account.Credentials.from_service_account_file(
-            sa_path, scopes=SCOPES
-        )
-    else:
-        return "CRITICAL ERROR: Google Service Account credential file missing."
 
 logger = logging.getLogger(__name__)
 
 # Setup Serper for scraping social media / job boards
 os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY", "")
 search = GoogleSerperAPIWrapper()
+
+# If modifying these scopes, delete the file token.json.
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 @tool
 def scrape_candidate_data(query: str) -> str:
@@ -89,9 +81,6 @@ def enrich_candidate_email(first_name: str, last_name: str, company_domain: str)
     except Exception as e:
         return f"ERROR during enrichment: {str(e)}"
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
-
 @tool
 def mcp_schedule_interview(candidate_email: str, time_slot: str) -> str:
     """
@@ -108,19 +97,18 @@ def mcp_schedule_interview(candidate_email: str, time_slot: str) -> str:
     start_time = parsed_time.isoformat()
     end_time = (parsed_time + datetime.timedelta(hours=1)).isoformat()
 
-    # 2. Google Authentication Handshake
-    creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # 2. Google Authentication Handshake via Service Account
+    sa_path = "enterprise-hr-ai-277db688e9e6.json" 
     
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+    if os.path.exists(sa_path):
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                sa_path, scopes=SCOPES
+            )
+        except Exception as auth_err:
+            return f"CRITICAL ERROR: Failed to parse Service Account file: {str(auth_err)}"
+    else:
+        return "CRITICAL ERROR: Google Service Account credential file missing."
 
     # 3. Execute Calendar Injection
     try:
