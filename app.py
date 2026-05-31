@@ -2,6 +2,27 @@ import streamlit as st
 import requests
 import uuid
 import pandas as pd
+import os
+
+
+try:
+    # 1. Map Streamlit Secrets to System Environment Variables
+    for key, value in st.secrets.items():
+        if key not in ["CREDENTIALS_JSON", "MCP_SERVERS_JSON"]:
+            os.environ[key] = str(value)
+
+    # 2. Recreate the physical JSON files required by the agents
+    if "CREDENTIALS_JSON" in st.secrets:
+        with open("credentials.json", "w", encoding="utf-8") as f:
+            f.write(st.secrets["CREDENTIALS_JSON"])
+
+    if "MCP_SERVERS_JSON" in st.secrets:
+        with open("mcp_servers.json", "w", encoding="utf-8") as f:
+            f.write(st.secrets["MCP_SERVERS_JSON"])
+except Exception as e:
+    # If running locally without st.secrets, it safely ignores this block
+    print(f"Skipping cloud secrets injection: {e}")
+
 
 st.set_page_config(page_title="Agentic Talent Engine", layout="wide")
 
