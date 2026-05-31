@@ -98,7 +98,7 @@ def mcp_schedule_interview(candidate_email: str, time_slot: str) -> str:
     end_time = (parsed_time + datetime.timedelta(hours=1)).isoformat()
 
     # 2. Google Authentication Handshake via Service Account
-    sa_path = "enterprise-hr-ai-277db688e9e6.json" 
+    sa_path = "credentials.json" 
     
     if os.path.exists(sa_path):
         try:
