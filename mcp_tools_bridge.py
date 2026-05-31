@@ -21,6 +21,18 @@ from googleapiclient.discovery import build
 from database import update_candidate_status
 from rag_pipeline import rag_pipeline
 
+from google.oauth2 import service_account
+    
+    # Path inside your cloud environment configured via app.py setup
+    sa_path = "enterprise-hr-ai-277db688e9e6.json" 
+    
+    if os.path.exists(sa_path):
+        creds = service_account.Credentials.from_service_account_file(
+            sa_path, scopes=SCOPES
+        )
+    else:
+        return "CRITICAL ERROR: Google Service Account credential file missing."
+
 logger = logging.getLogger(__name__)
 
 # Setup Serper for scraping social media / job boards
