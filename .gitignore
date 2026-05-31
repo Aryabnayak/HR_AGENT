@@ -1,0 +1,6 @@
+﻿venv/
+.env
+token.json
+credentials.json
+mcp_servers.json
+*.json
